@@ -1,10 +1,17 @@
 /**Test*/
-
+#include <stdio.h>
 
 void sayHello();
 
-int main void()
+int main ()
 {
-  return 0;
+	sayHello();
+	return 0;
 
+}
+
+void sayHello()
+{
+
+	printf("Hello\n");
 }
