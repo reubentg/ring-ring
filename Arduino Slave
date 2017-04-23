@@ -25,7 +25,7 @@ the light sensor, and the temp/humidity sensor.
 #define SLAVE_ADDRESS 0x05 //I2C Address for the Arduino
 #define BACKLIGHT 13 //For Button backlight
 #define LIGHT_LEVEL 300 //Below this light level, the backlight will turn on
-#define REFRESH_RATE 5000 //Sensor values will be refreshed every X us
+#define REFRESH_RATE 1000 //Sensor values will be refreshed every X us
 
 //Making objects
 NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE); 
@@ -46,7 +46,7 @@ void setup() {
 }
 
 void loop() {
-  //Reading all sensor data every second
+  //Reading all sensor data every REFRESH_RATE
   delay(REFRESH_RATE);
   chk = DHT.read11(DHT11_PIN);
   distance = sonar.convert_cm(sonar.ping());
