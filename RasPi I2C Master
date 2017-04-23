@@ -1,0 +1,28 @@
+/* 
+ * A short script for the RasPi to talk with the Arduino
+ * After establishing I2C comms, the RasPi asks the Arduino for 3 bytes of data
+ * and puts it into a char array for later use
+ */
+
+#include <wiringPiI2C.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+
+#define ADDRESS 0x05
+
+int i = 0;
+
+int main() {
+	int fd = wiringPiI2CSetup(ADDRESS); //Sets up I2C comms using WiringPi
+	if (fd == -1) { //Checks if I2C communications is successfully established
+		printf("I2C connection unsuccessful\n");
+		return(-1);
+	} else {
+		unsigned char buffer[3]; //Creates char array for incoming data from Arduino
+		read(fd, buffer, 3); //Asks Arduino for 3 bytes of data, puts it into the char array
+		for (i = 0; i < 3; i++) { //Prints the data for troubleshooting
+			printf("%d\n", buffer[i]);
+		}
+	}	
+}
