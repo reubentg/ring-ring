@@ -7,6 +7,7 @@ the light sensor, and the temp/humidity sensor.
 -The Arduino reads the Temp/Humidity and sends that data to the Pi
 -The Arduino sends a 3 byte int array to the Pi on request:
      -A binary 0 or 1 based on the distance sensor
+     -A binary 0 or 1 based on the force sensor
      -Temperature
      -Humidity
 
@@ -19,13 +20,15 @@ the light sensor, and the temp/humidity sensor.
 
 #define TRIGGER_PIN  12 //For Ping Sensor
 #define ECHO_PIN     11 //For Ping Sensor
-#define MAX_DISTANCE 400 //For Ping Sensor
+#define MAX_DISTANCE 300 //For Ping Sensor
 #define LIGHT_PIN 0 //Photocell Reading
 #define DHT11_PIN 7 //Temp & Humidity Reading
+#define FORCE_PIN 1 //Force Sensor Reading
 #define SLAVE_ADDRESS 0x05 //I2C Address for the Arduino
 #define BACKLIGHT 13 //For Button backlight
-#define LIGHT_LEVEL 300 //Below this light level, the backlight will turn on
-#define REFRESH_RATE 1000 //Sensor values will be refreshed every X us
+#define LAMP 2 //For porch lamp
+#define LIGHT_LEVEL 800 //Below this light level, the backlight will turn on
+#define REFRESH_RATE 500 //Sensor values will be refreshed every X ms
 
 //Making objects
 NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE); 
@@ -33,13 +36,16 @@ dht DHT;
 
 //Initializing variables
 int photocellReading;  
+int forceReading;
 int chk;
 int distance;
 int registerAddr;
 int activateCamera;
-byte data[3];
+int package;
+byte data[4];
 
 void setup() {
+  //Serial.begin(9600);
   Wire.begin(SLAVE_ADDRESS); //Beginning I2C communication 
   Wire.onReceive(receiveData); //Setting up automatic I2C methods
   Wire.onRequest(sendData); //Setting up automatic I2C methods
@@ -51,12 +57,23 @@ void loop() {
   chk = DHT.read11(DHT11_PIN);
   distance = sonar.convert_cm(sonar.ping());
   photocellReading = analogRead(LIGHT_PIN);
+  forceReading = analogRead(FORCE_PIN);
+
 
   //Taking the light reading and toggling the button backlight
   if (photocellReading < LIGHT_LEVEL) {
     digitalWrite(BACKLIGHT, HIGH);
+    digitalWrite(LAMP, HIGH);
   } else {
     digitalWrite(BACKLIGHT, LOW);
+    digitalWrite(LAMP, LOW);
+  }
+
+  //Sending binary 1 or 0 based on force sensor reading ("1" means a package is present)
+  if (forceReading > 200) {
+    package = 1;
+  } else {
+    package = 0;
   }
 
   //Sending binary 1 or 0 based on distance reading ("1" means activate camera)
@@ -65,16 +82,28 @@ void loop() {
   } else {
     activateCamera = 0;
   }
-
-  //Creating an int array with activateCamera, Temeperature (C), and Humidity (%)
-  data[0] = (int) activateCamera;
-  data[1] = (int) DHT.temperature;
-  data[2] = (int) DHT.humidity;  
+  //Serial.print(activateCamera);
+  //Serial.print(' ');
+  //Serial.print(forceReading);
+  //Serial.print(' ');
+  //Serial.print(photocellReading);
+  //Serial.print(' ');
+  //Serial.print(DHT.temperature);
+  //Serial.print(' ');
+  //Serial.println(DHT.humidity);
 }
 
 //On a Pi request, send data[], 3 bytes
 void sendData() {
-  Wire.write(data, 3);
+  //Creating an int array with activateCamera, Temeperature (C), and Humidity (%)
+  data[0] = (short) activateCamera;
+  data[1] = (short) package;
+  if (chk == DHTLIB_OK) {
+    data[2] = (short) DHT.temperature;
+    data[3] = (short) DHT.humidity;  
+  }
+  Serial.println("request");
+  Wire.write(data, 4);
 }
 
 //Place holder if we want to have the Pi pass data to the Arduino
