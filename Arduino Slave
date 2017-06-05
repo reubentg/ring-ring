@@ -25,7 +25,7 @@ the light sensor, and the temp/humidity sensor.
 #define DHT11_PIN 7 //Temp & Humidity Reading
 #define FORCE_PIN 1 //Force Sensor Reading
 #define SLAVE_ADDRESS 0x05 //I2C Address for the Arduino
-#define BACKLIGHT 13 //For Button backlight
+//#define BACKLIGHT 3 //For Button backlight
 #define LAMP 2 //For porch lamp
 #define LIGHT_LEVEL 800 //Below this light level, the backlight will turn on
 #define REFRESH_RATE 500 //Sensor values will be refreshed every X ms
@@ -40,12 +40,17 @@ int forceReading;
 int chk;
 int distance;
 int registerAddr;
-int activateCamera;
-int package;
+short activateCamera;
+short package;
+short temp = 0;
+short humid = 0;
+//int backlightStatus;
 byte data[4];
 
 void setup() {
   //Serial.begin(9600);
+  //pinMode(BACKLIGHT, OUTPUT);
+  pinMode(LAMP, OUTPUT);
   Wire.begin(SLAVE_ADDRESS); //Beginning I2C communication 
   Wire.onReceive(receiveData); //Setting up automatic I2C methods
   Wire.onRequest(sendData); //Setting up automatic I2C methods
@@ -54,7 +59,13 @@ void setup() {
 void loop() {
   //Reading all sensor data every REFRESH_RATE
   delay(REFRESH_RATE);
-  chk = DHT.read11(DHT11_PIN);
+  chk = DHT.read11(DHT11_PIN);  //we read and set temp vars here
+  if (chk == DHTLIB_OK) { //only update vars if checksum is OK; else previous values are not overridden
+    temp = (short) DHT.temperature;
+    humid = (short) DHT.humidity;  
+  }
+  
+  
   distance = sonar.convert_cm(sonar.ping());
   photocellReading = analogRead(LIGHT_PIN);
   forceReading = analogRead(FORCE_PIN);
@@ -62,10 +73,12 @@ void loop() {
 
   //Taking the light reading and toggling the button backlight
   if (photocellReading < LIGHT_LEVEL) {
-    digitalWrite(BACKLIGHT, HIGH);
+    //backlightStatus = 1;
+    //digitalWrite(BACKLIGHT, backlightStatus);
     digitalWrite(LAMP, HIGH);
   } else {
-    digitalWrite(BACKLIGHT, LOW);
+    //backlightStatus = 0;
+    //digitalWrite(BACKLIGHT, backlightStatus);
     digitalWrite(LAMP, LOW);
   }
 
@@ -91,17 +104,17 @@ void loop() {
   //Serial.print(DHT.temperature);
   //Serial.print(' ');
   //Serial.println(DHT.humidity);
+  //Serial.print(" backlightStatus = ");
+  //Serial.println(backlightStatus);
 }
 
 //On a Pi request, send data[], 3 bytes
 void sendData() {
   //Creating an int array with activateCamera, Temeperature (C), and Humidity (%)
-  data[0] = (short) activateCamera;
-  data[1] = (short) package;
-  if (chk == DHTLIB_OK) {
-    data[2] = (short) DHT.temperature;
-    data[3] = (short) DHT.humidity;  
-  }
+  data[0] = activateCamera;
+  data[1] = package;
+  data[2] = temp;
+  data[3] = humid;  
   Serial.println("request");
   Wire.write(data, 4);
 }
